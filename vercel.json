@@ -8,44 +8,7 @@
       "maxDuration": 60
     }
   },
-  "headers": [
-    {
-      "source": "/api/(.*)",
-      "headers": [
-        { "key": "Access-Control-Allow-Origin", "value": "*" },
-        { "key": "Access-Control-Allow-Methods", "value": "GET, POST, OPTIONS" },
-        { "key": "Access-Control-Allow-Headers", "value": "Content-Type, Authorization, Accept" }
-      ]
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/sse",
-      "dest": "/api/sse.ts"
-    },
-    {
-      "src": "/api/messages",
-      "dest": "/api/messages.ts"
-    },
-    {
-      "src": "/api/mcp",
-      "dest": "/api/mcp.ts"
-    },
-    {
-      "src": "/api/health",
-      "dest": "/api/health.ts"
-    },
-    {
-      "src": "/api/tools",
-      "dest": "/api/tools.ts"
-    },
-    {
-      "src": "/api/resources",
-      "dest": "/api/resources.ts"
-    },
-    {
-      "src": "/",
-      "dest": "/api/index.ts"
-    }
+  "rewrites": [
+    { "source": "/", "destination": "/api/index" }
   ]
 }
