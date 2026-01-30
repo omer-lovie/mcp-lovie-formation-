@@ -2,7 +2,7 @@
 
 > Form your US company through AI assistants with MCP (Model Context Protocol)
 
-[![npm version](https://badge.fury.io/js/@lovie-ai%2Fformation-mcp-server.svg)](https://www.npmjs.com/package/@lovie-ai/formation-mcp-server)
+[![npm version](https://badge.fury.io/js/@lovie-ai%2Fformation-mcp-server.svg)](https://www.npmjs.com/package/@lovie-tech/formation-mcp-server)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 Lovie Formation MCP Server enables AI assistants to help users form US companies (LLC, C-Corp, or S-Corp) with real-time name checking, automatic document generation, and seamless state filing.
@@ -30,7 +30,7 @@ Edit `~/Library/Application Support/Claude/claude_desktop_config.json` (Mac) or 
   "mcpServers": {
     "lovie-formation": {
       "command": "npx",
-      "args": ["@lovie-ai/formation-mcp-server@latest"]
+      "args": ["@lovie-tech/formation-mcp-server@latest"]
     }
   }
 }
@@ -47,7 +47,7 @@ Edit `.cursor/mcp.json` in your project or `~/.cursor/mcp.json` globally:
   "mcpServers": {
     "lovie-formation": {
       "command": "npx",
-      "args": ["@lovie-ai/formation-mcp-server@latest"]
+      "args": ["@lovie-tech/formation-mcp-server@latest"]
     }
   }
 }
@@ -58,7 +58,7 @@ Restart Cursor.
 ### Claude Code (CLI)
 
 ```bash
-claude mcp add lovie-formation npx @lovie-ai/formation-mcp-server@latest
+claude mcp add lovie-formation npx @lovie-tech/formation-mcp-server@latest
 ```
 
 ### Windsurf
@@ -70,7 +70,7 @@ Edit `~/.codeium/windsurf/mcp_config.json`:
   "mcpServers": {
     "lovie-formation": {
       "command": "npx",
-      "args": ["@lovie-ai/formation-mcp-server@latest"]
+      "args": ["@lovie-tech/formation-mcp-server@latest"]
     }
   }
 }
@@ -81,18 +81,27 @@ Edit `~/.codeium/windsurf/mcp_config.json`:
 In Manus settings, add MCP server:
 - **Name**: `lovie-formation`
 - **Command**: `npx`
-- **Args**: `@lovie-ai/formation-mcp-server@latest`
+- **Args**: `@lovie-tech/formation-mcp-server@latest`
 
 ### Generic (Any MCP Client)
 
 ```json
 {
   "command": "npx",
-  "args": ["@lovie-ai/formation-mcp-server@latest"]
+  "args": ["@lovie-tech/formation-mcp-server@latest"]
 }
 ```
 
 ## Available Tools
+
+### Authentication Tools
+
+| Tool | Description |
+|------|-------------|
+| `formation_login` | Opens browser to Lovie dashboard for login |
+| `formation_set_token` | Set the authentication token after copying from dashboard |
+| `formation_auth_status` | Check current authentication status |
+| `formation_logout` | Clear authentication and log out |
 
 ### Information Tools
 
@@ -146,6 +155,24 @@ The MCP server also provides resources that AI assistants can read:
 | `formation://company-types` | LLC vs C-Corp vs S-Corp comparison |
 | `formation://faq` | Frequently asked questions |
 | `formation://requirements` | Required information checklist |
+
+## Authentication
+
+To use Lovie's formation services, you need to authenticate:
+
+1. **AI calls `formation_login`** → Opens browser to Lovie dashboard
+2. **You log in** → Sign in with your Lovie account
+3. **Copy the token** → Token is displayed on the dashboard
+4. **AI calls `formation_set_token`** → Authenticates your session
+
+```
+User: "I want to form a company"
+AI: *calls formation_login* → Browser opens
+AI: "Please log in and copy the token from the dashboard"
+User: "Here's my token: eyJ..."
+AI: *calls formation_set_token* → "Successfully authenticated!"
+AI: *calls formation_start* → Begins formation process
+```
 
 ## Example Conversation
 
@@ -234,7 +261,7 @@ npx @modelcontextprotocol/inspector node dist/mcp/index.js
 ## Support
 
 - **Website**: https://lovie.co/
-- **npm**: https://www.npmjs.com/package/@lovie-ai/formation-mcp-server
+- **npm**: https://www.npmjs.com/package/@lovie-tech/formation-mcp-server
 
 ## Legal Disclaimer
 

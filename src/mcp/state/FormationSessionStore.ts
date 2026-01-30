@@ -10,10 +10,11 @@ const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
 
 export class FormationSessionStore {
   // Create a new session
-  async create(): Promise<FormationSession> {
+  async create(userId?: string): Promise<FormationSession> {
     const now = new Date();
     const session: FormationSession = {
       sessionId: uuidv4(),
+      userId,
       status: SessionStatus.CREATED,
       currentStep: FormationStep.CREATED,
       shareholders: [],

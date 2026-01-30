@@ -1,5 +1,5 @@
 import { registerTool, ToolDefinition } from './index';
-import { FormationStep, SessionStatus } from '../state/types';
+import { FormationStep, SessionStatus, DEFAULT_INCORPORATOR } from '../state/types';
 import { FormationSessionStore } from '../state/FormationSessionStore';
 import { loadSession } from '../middleware/session';
 import { validationError, MCPToolError, ErrorCode } from '../errors';
@@ -8,7 +8,7 @@ import { CertificateApiClient } from '../../services/certificate/api';
 // T039: formation_generate_certificate tool
 export const formationGenerateCertificateTool: ToolDefinition = {
   name: 'formation_generate_certificate',
-  description: 'Generate the certificate of incorporation. Returns an S3 URL for the user to review the PDF document.',
+  description: 'Generate the certificate document. For C-Corp/S-Corp generates Certificate of Incorporation, for LLC generates Certificate of Formation. Returns an S3 URL for the user to review the PDF document.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -43,8 +43,17 @@ const handleFormationGenerateCertificate = async (
     // Create certificate API client
     const certificateClient = new CertificateApiClient();
 
-    // Build the request payload for the certificate API
-    const request = {
+    // Determine company type for API
+    const companyType = session.companyDetails?.companyType;
+    const isLLC = companyType === 'LLC';
+    const apiCompanyType = isLLC ? 'llc' : companyType === 'C-Corp' ? 'c-corp' : 's-corp';
+
+    // Determine document type for display
+    const documentType = isLLC ? 'Certificate of Formation' : 'Certificate of Incorporation';
+
+    // Build the base request payload for the certificate API
+    const request: any = {
+      companyType: apiCompanyType,
       companyName: session.companyDetails.fullName,
       registeredAgent: {
         name: session.registeredAgent.name,
@@ -53,14 +62,30 @@ const handleFormationGenerateCertificate = async (
           city: session.registeredAgent.address.city,
           state: session.registeredAgent.address.state,
           zipCode: session.registeredAgent.address.zipCode,
-          county: session.registeredAgent.address.county || 'Sussex',
+          ...(isLLC ? {} : { county: session.registeredAgent.address.county || 'Sussex' }),
         },
       },
-      sharesAuthorized: session.shareStructure?.authorizedShares || 0,
-      parValue: session.shareStructure?.parValuePerShare || 0,
     };
 
-    // Call the existing certificate generation API
+    // Add corporation-specific fields (C-Corp and S-Corp)
+    if (!isLLC) {
+      request.authorizedShares = session.shareStructure?.authorizedShares || 10000000;
+      request.parValue = String(session.shareStructure?.parValuePerShare || 0.00001);
+
+      // Use the session incorporator or default incorporator (Sema Kurt Caskey)
+      const incorporator = session.incorporator || DEFAULT_INCORPORATOR;
+      request.incorporator = {
+        name: incorporator.name,
+        address: {
+          street: incorporator.address.street1,
+          city: incorporator.address.city,
+          state: incorporator.address.state,
+          zipCode: incorporator.address.zipCode,
+        },
+      };
+    }
+
+    // Call the certificate generation API
     const result = await certificateClient.generateCertificate(request);
 
     // T041: Calculate expiration time (use API response or default to 60 minutes)
@@ -87,9 +112,20 @@ const handleFormationGenerateCertificate = async (
       success: true,
       certificateId: certificateData.certificateId,
       downloadUrl: certificateData.downloadUrl,
+      documentType,
+      companyType: apiCompanyType,
       expiresAt,
       minutesRemaining,
-      instructions: 'Please review the certificate at the provided URL. Once you have reviewed it, use formation_approve_certificate to approve and complete the formation, or update the company details and regenerate if changes are needed.',
+      // IMPORTANT: LLM MUST share this URL with the user
+      certificateReviewRequired: {
+        title: `📄 ${documentType} Generated`,
+        action: `IMPORTANT: Please share the certificate URL below with the user so they can review their ${documentType} before approving.`,
+        url: certificateData.downloadUrl,
+        displayMessage: `Your ${documentType} is ready for review! Please click the link below to view your document:\n\n📄 **${documentType} URL:** ${certificateData.downloadUrl}\n\nThis link expires in ${minutesRemaining} minutes.`,
+      },
+      confirmationRequired: true,
+      confirmationMessage: `Please review the ${documentType.toLowerCase()} at the URL above and confirm everything looks correct. Once confirmed, the formation will proceed.`,
+      instructions: `IMPORTANT: Share the ${documentType.toLowerCase()} URL with the user. They must review the PDF document before approving. Once reviewed, use formation_approve_certificate to approve and complete the formation.`,
     };
   } catch (error) {
     // Re-throw MCPToolError as-is
@@ -168,17 +204,93 @@ const handleFormationApproveCertificate = async (
     completedAt: certificateData.approvedAt,
   };
 
+  // Determine company type and document type
+  const companyType = session.companyDetails?.companyType;
+  const isLLC = companyType === 'LLC';
+  const documentType = isLLC ? 'Certificate of Formation' : 'Certificate of Incorporation';
+
+  // Calculate par value for capital funding reminder (only for corporations)
+  const shareStructure = session.shareStructure;
+  const totalParValue = shareStructure ? shareStructure.authorizedShares * shareStructure.parValuePerShare : 0;
+  const formattedParValue = totalParValue < 0.01 ? `$${totalParValue.toFixed(5)}` : `$${totalParValue.toFixed(2)}`;
+
+  // Build next steps based on company type
+  const nextSteps = isLLC
+    ? [
+        '1. Complete payment to file the formation documents',
+        '2. Receive your Certificate of Formation from Delaware (typically 3-5 business days)',
+        '3. Open your Lovie Bank Account',
+        '4. Lovie will help you obtain your EIN (FREE)',
+        '5. Lovie will keep you compliant with ongoing reminders',
+      ]
+    : [
+        '1. Complete payment to file the formation documents',
+        '2. Receive your Certificate of Incorporation from Delaware (typically 3-5 business days)',
+        `3. Open your Lovie Bank Account and transfer ${formattedParValue} capital (required by law)`,
+        '4. Lovie will help you obtain your EIN (FREE)',
+        '5. Lovie will keep you compliant with ongoing reminders',
+      ];
+
+  // Build free services list based on company type
+  const freeServices = [
+    {
+      service: 'EIN Application',
+      description: 'Lovie will help you obtain your Employer Identification Number (EIN) from the IRS - completely FREE',
+      status: 'Lovie handles this for you',
+    },
+    {
+      service: 'Lovie Bank Account',
+      description: 'Open your company bank account directly through Lovie - integrated with our financial platform',
+      status: 'Available after formation',
+    },
+    {
+      service: 'Compliance Monitoring',
+      description: 'Lovie\'s in-house legal team will send you reminders for annual filings, franchise taxes, and other compliance requirements',
+      status: 'Automatic - we\'ve got you covered',
+    },
+    {
+      service: isLLC ? 'Operating Agreement' : 'Bylaws',
+      description: 'All legally compliant documents are included with your formation',
+      status: 'Included FREE',
+    },
+  ];
+
+  // Add LLC to C-Corp upgrade offer for LLCs
+  if (isLLC) {
+    freeServices.push({
+      service: 'FREE Upgrade to C-Corp',
+      description: 'If you decide to raise money from investors in the future, Lovie will upgrade your LLC to a C-Corp for FREE!',
+      status: 'Available anytime',
+    });
+  }
+
   return {
     success: true,
     status: 'completed',
+    documentType,
+    companyType,
     formationData,
-    nextSteps: [
-      'Complete payment to file the formation documents',
-      'Receive your Certificate of Formation from Delaware',
-      'Set up your company bank account',
-      'Obtain your EIN from the IRS',
-    ],
-    message: 'Congratulations! Your company formation has been approved. Please proceed to payment to file with the Delaware Secretary of State.',
+    trackingInfo: {
+      message: 'Lovie has started your formation process! You can track your formation status anytime.',
+      methods: [
+        'Use formation_get_status with your session ID to check status via MCP',
+        'Visit the Lovie Dashboard to track progress',
+      ],
+      sessionId: session.sessionId,
+      dashboardUrl: `https://lovie-web.vercel.app/dashboard/formations/${session.sessionId}`,
+    },
+    certificateUrl: (session.certificateData as any)?.downloadUrl || null,
+    postFormationCompliance: {
+      title: '🎉 Congratulations! Here\'s what Lovie will handle for you (FREE):',
+      freeServices,
+      capitalFundingReminder: !isLLC && shareStructure ? {
+        title: '⚠️ Required: Fund Your Company Capital',
+        amount: formattedParValue,
+        instruction: `Remember to transfer ${formattedParValue} from your personal account to your company's Lovie Bank Account to comply with corporate law.`,
+      } : null,
+    },
+    nextSteps,
+    message: `🎉 Congratulations! Lovie has started your ${companyType} formation process. Track your status at: https://lovie-web.vercel.app/dashboard/formations/${session.sessionId}`,
   };
 };
 

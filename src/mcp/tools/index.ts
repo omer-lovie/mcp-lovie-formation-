@@ -32,7 +32,7 @@ export function getAllTools(): ToolDefinition[] {
   return Array.from(toolDefinitions.values());
 }
 
-// Handle a tool call
+// Handle a tool call - no auth required, collect info upfront
 export async function handleToolCall(
   name: string,
   args: Record<string, unknown>,
@@ -42,6 +42,7 @@ export async function handleToolCall(
   if (!handler) {
     throw new Error(`Unknown tool: ${name}`);
   }
+
   return handler(args, store);
 }
 
@@ -52,6 +53,8 @@ import { registerStakeholderTools } from './stakeholders';
 import { registerCertificateTools } from './certificate';
 import { registerSyncTools } from './sync';
 import { registerInfoTools } from './info';
+import { registerSubmissionTools } from './submission';
+import { registerPaymentTools } from './payment';
 
 // Import and register all tools
 export function initializeTools(): void {
@@ -61,6 +64,8 @@ export function initializeTools(): void {
   registerCertificateTools();
   registerSyncTools();
   registerInfoTools();
+  registerPaymentTools();
+  registerSubmissionTools();
 }
 
 // Initialize tools on module load

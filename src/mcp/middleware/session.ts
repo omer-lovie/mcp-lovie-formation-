@@ -2,14 +2,16 @@ import { FormationSession, FormationStep, CompanyType } from '../state/types';
 import { FormationSessionStore } from '../state/FormationSessionStore';
 import { sessionNotFound, sessionExpired } from '../errors';
 
-// Step order for progress calculation
+// Step order for progress calculation (C-Corp)
 const STEP_ORDER: FormationStep[] = [
   FormationStep.CREATED,
+  FormationStep.BUSINESS_DESCRIBED,
   FormationStep.STATE_SELECTED,
   FormationStep.TYPE_SELECTED,
   FormationStep.ENDING_SELECTED,
   FormationStep.NAME_SET,
   FormationStep.NAME_CHECKED,
+  FormationStep.COMPANY_ADDRESS_SET,
   FormationStep.AGENT_SET,
   FormationStep.SHARES_SET,
   FormationStep.SHAREHOLDERS_ADDED,
@@ -22,11 +24,13 @@ const STEP_ORDER: FormationStep[] = [
 // Steps for LLC (no share structure)
 const LLC_STEP_ORDER: FormationStep[] = [
   FormationStep.CREATED,
+  FormationStep.BUSINESS_DESCRIBED,
   FormationStep.STATE_SELECTED,
   FormationStep.TYPE_SELECTED,
   FormationStep.ENDING_SELECTED,
   FormationStep.NAME_SET,
   FormationStep.NAME_CHECKED,
+  FormationStep.COMPANY_ADDRESS_SET,
   FormationStep.AGENT_SET,
   FormationStep.SHAREHOLDERS_ADDED,
   FormationStep.AUTHORIZED_PARTY_SET,
@@ -89,11 +93,13 @@ export function getRemainingSteps(currentStep: FormationStep, companyType?: Comp
 // Step descriptions for user-friendly messages
 export const STEP_DESCRIPTIONS: Record<FormationStep, string> = {
   [FormationStep.CREATED]: 'Session created',
+  [FormationStep.BUSINESS_DESCRIBED]: 'Describe your business',
   [FormationStep.STATE_SELECTED]: 'Select formation state',
   [FormationStep.TYPE_SELECTED]: 'Select company type',
   [FormationStep.ENDING_SELECTED]: 'Select entity ending',
   [FormationStep.NAME_SET]: 'Set company name',
   [FormationStep.NAME_CHECKED]: 'Check name availability',
+  [FormationStep.COMPANY_ADDRESS_SET]: 'Set company address',
   [FormationStep.AGENT_SET]: 'Set registered agent',
   [FormationStep.SHARES_SET]: 'Set share structure',
   [FormationStep.SHAREHOLDERS_ADDED]: 'Add shareholders',

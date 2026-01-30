@@ -10,6 +10,7 @@ const TOPIC_MAP: Record<string, string> = {
   'company-types': 'formation://company-types',
   faq: 'formation://faq',
   requirements: 'formation://requirements',
+  'incorporation-process': 'formation://incorporation-process',
 };
 
 // formation_get_info tool
@@ -21,8 +22,8 @@ export const formationGetInfoTool: ToolDefinition = {
     properties: {
       topic: {
         type: 'string',
-        enum: ['guide', 'pricing', 'company-types', 'faq', 'requirements'],
-        description: 'The topic to get information about: "guide" (step-by-step formation guide), "pricing" (Lovie pricing and Delaware fees), "company-types" (LLC vs C-Corp vs S-Corp comparison), "faq" (frequently asked questions), "requirements" (what information is needed)',
+        enum: ['guide', 'pricing', 'company-types', 'faq', 'requirements', 'incorporation-process'],
+        description: 'The topic to get information about: "guide" (step-by-step formation guide), "pricing" (Lovie pricing and Delaware fees), "company-types" (LLC vs C-Corp comparison), "faq" (frequently asked questions), "requirements" (what information is needed), "incorporation-process" (how our legal team incorporates your company)',
       },
     },
     required: ['topic'],

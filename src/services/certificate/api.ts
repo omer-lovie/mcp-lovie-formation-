@@ -2,6 +2,7 @@
  * Certificate API Client
  * Handles communication with the certificate generation API
  * Feature 002: FR-001, FR-002, FR-003
+ * Updated: Now supports both C-Corp (Certificate of Incorporation) and LLC (Certificate of Formation)
  */
 
 import axios, { AxiosInstance, AxiosError } from 'axios';
@@ -32,7 +33,7 @@ export class CertificateApiClient {
   }
 
   /**
-   * Generate certificate of incorporation
+   * Generate certificate (Certificate of Incorporation for Corps, Certificate of Formation for LLCs)
    * POST /certificates
    * @param request - Certificate generation request payload
    * @returns Certificate generation response with download URL
@@ -61,14 +62,24 @@ export class CertificateApiClient {
 
   /**
    * Validate certificate generation request
+   * Validates based on company type (LLC vs C-Corp/S-Corp)
    */
   private validateRequest(request: CertificateGenerationRequest): void {
     const errors: string[] = [];
 
+    // Validate company type
+    if (!request.companyType) {
+      errors.push('Company type is required');
+    } else if (!['c-corp', 's-corp', 'llc'].includes(request.companyType)) {
+      errors.push('Company type must be c-corp, s-corp, or llc');
+    }
+
+    // Validate company name (required for all)
     if (!request.companyName?.trim()) {
       errors.push('Company name is required');
     }
 
+    // Validate registered agent (required for all)
     if (!request.registeredAgent?.name?.trim()) {
       errors.push('Registered agent name is required');
     }
@@ -81,22 +92,40 @@ export class CertificateApiClient {
       if (!addr.city?.trim()) errors.push('Registered agent city is required');
       if (!addr.state?.trim()) errors.push('Registered agent state is required');
       if (!addr.zipCode?.trim()) errors.push('Registered agent zip code is required');
-      if (!addr.county?.trim()) errors.push('Registered agent county is required');
+
+      // County is required for C-Corp and S-Corp
+      if (request.companyType !== 'llc' && !addr.county?.trim()) {
+        errors.push('Registered agent county is required for corporations');
+      }
     }
 
-    // Note: Incorporator is no longer required by the API
-    // The company handles incorporator separately via incorporator statement
+    // Validate C-Corp/S-Corp specific fields
+    if (request.companyType === 'c-corp' || request.companyType === 's-corp') {
+      // Shares are required for corporations
+      if (typeof request.authorizedShares !== 'number') {
+        errors.push('Authorized shares is required for corporations');
+      } else if (request.authorizedShares <= 0) {
+        errors.push('Authorized shares must be greater than 0');
+      }
 
-    if (typeof request.sharesAuthorized !== 'number') {
-      errors.push('Shares authorized must be a number');
-    } else if (request.sharesAuthorized < 0) {
-      errors.push('Shares authorized must be non-negative');
-    }
+      // Par value is required for corporations (as string)
+      if (!request.parValue) {
+        errors.push('Par value is required for corporations');
+      }
 
-    if (typeof request.parValue !== 'number') {
-      errors.push('Par value must be a number');
-    } else if (request.parValue < 0) {
-      errors.push('Par value must be non-negative');
+      // Incorporator is required for corporations
+      if (!request.incorporator?.name?.trim()) {
+        errors.push('Incorporator name is required for corporations');
+      }
+      if (!request.incorporator?.address) {
+        errors.push('Incorporator address is required for corporations');
+      } else {
+        const incAddr = request.incorporator.address;
+        if (!incAddr.street?.trim()) errors.push('Incorporator street is required');
+        if (!incAddr.city?.trim()) errors.push('Incorporator city is required');
+        if (!incAddr.state?.trim()) errors.push('Incorporator state is required');
+        if (!incAddr.zipCode?.trim()) errors.push('Incorporator zip code is required');
+      }
     }
 
     if (errors.length > 0) {

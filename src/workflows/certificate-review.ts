@@ -261,31 +261,20 @@ function validateCompanyData(companyData: CompanyFormationData): void {
 
 /**
  * Build certificate generation request from company data
+ * Updated to support both C-Corp/S-Corp (Certificate of Incorporation) and LLC (Certificate of Formation)
  */
 function buildCertificateRequest(
   companyData: CompanyFormationData
 ): CertificateGenerationRequest {
   const agent = companyData.registeredAgent!;
+  const isLLC = companyData.companyType === 'LLC';
 
-  // Determine shares and par value based on company type
-  let sharesAuthorized = 10000000; // Default 10M shares
-  let parValue = 0.00001; // Default $0.00001 par value
+  // Map company type to API format
+  const apiCompanyType = isLLC ? 'llc' : companyData.companyType === 'C-Corp' ? 'c-corp' : 's-corp';
 
-  if (companyData.companyType === 'LLC') {
-    // LLCs don't have shares, use 0 for both values
-    sharesAuthorized = 0;
-    parValue = 0;
-  } else {
-    // Extract actual values from formation data if available (C-Corp/S-Corp)
-    if (companyData.authorizedShares !== undefined) {
-      sharesAuthorized = companyData.authorizedShares;
-    }
-    if (companyData.parValue !== undefined) {
-      parValue = companyData.parValue;
-    }
-  }
-
-  return {
+  // Build base request
+  const request: CertificateGenerationRequest = {
+    companyType: apiCompanyType as 'c-corp' | 's-corp' | 'llc',
     companyName: companyData.companyName,
     registeredAgent: {
       name: agent.name,
@@ -294,12 +283,38 @@ function buildCertificateRequest(
         city: agent.address.city,
         state: agent.address.state,
         zipCode: agent.address.zipCode,
-        county: 'Sussex' // Default to Sussex County for Delaware; could be made dynamic
+        // County is required for C-Corp/S-Corp - default to Sussex for Delaware
+        ...(isLLC ? {} : { county: 'Sussex' }),
       }
     },
-    sharesAuthorized,
-    parValue
   };
+
+  // Add corporation-specific fields (C-Corp and S-Corp only)
+  if (!isLLC) {
+    request.authorizedShares = companyData.authorizedShares || 10000000;
+    request.parValue = String(companyData.parValue || 0.00001);
+
+    // Use first shareholder as incorporator
+    const firstShareholder = companyData.shareholders?.[0];
+    const incorporatorAddress = firstShareholder?.address || {
+      street1: '8 The Green, Suite A',
+      city: 'Dover',
+      state: 'DE',
+      zipCode: '19901',
+    };
+
+    request.incorporator = {
+      name: firstShareholder ? `${firstShareholder.firstName} ${firstShareholder.lastName}` : 'Lovie Inc.',
+      address: {
+        street: incorporatorAddress.street1,
+        city: incorporatorAddress.city,
+        state: incorporatorAddress.state,
+        zipCode: incorporatorAddress.zipCode,
+      },
+    };
+  }
+
+  return request;
 }
 
 /**
