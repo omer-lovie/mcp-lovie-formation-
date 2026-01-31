@@ -1,8 +1,8 @@
 # Dependencies
 node_modules/
 
-# Build output (built on npm publish via prepublish script)
-dist/
+# Build output
+# Note: dist/ is NOT ignored because Vercel API functions import from it
 build/
 *.tsbuildinfo
 

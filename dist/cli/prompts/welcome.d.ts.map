@@ -1,0 +1,1 @@
+{"version":3,"file":"welcome.d.ts","sourceRoot":"","sources":["../../../src/cli/prompts/welcome.ts"],"names":[],"mappings":"AAAA;;;;GAIG;AAMH,MAAM,WAAW,aAAa;IAC5B,MAAM,EAAE,KAAK,GAAG,QAAQ,CAAC;CAC1B;AAED;;GAEG;AACH,wBAAsB,WAAW,IAAI,OAAO,CAAC,aAAa,CAAC,CAsB1D;AAED;;GAEG;AACH,wBAAsB,iBAAiB,IAAI,OAAO,CAAC,OAAO,CAAC,CAW1D"}
